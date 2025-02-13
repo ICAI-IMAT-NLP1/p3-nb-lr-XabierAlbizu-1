@@ -81,7 +81,8 @@ class SentimentExample:
 
 def evaluate_classification(predictions: torch.Tensor, labels: torch.Tensor) -> Dict[str, float]:
     """
-    Evaluate classification metrics including accuracy, precision, recall, and F1-score.
+    Evaluate classification metrics including accuracy, precision, recall, and F1-score,
+    with handling for division by zero.
 
     Args:
         predictions (torch.Tensor): Predictions from the model.
@@ -90,6 +91,28 @@ def evaluate_classification(predictions: torch.Tensor, labels: torch.Tensor) -> 
     Returns:
         dict: A dictionary containing the calculated metrics.
     """
-    metrics: Dict[str, float] = None
+    TP = ((predictions == 1) & (labels == 1)).sum().item()
+    FP = ((predictions == 1) & (labels == 0)).sum().item()
+    TN = ((predictions == 0) & (labels == 0)).sum().item()
+    FN = ((predictions == 0) & (labels == 1)).sum().item()
+    
+    metrics: Dict[str, float] = {}
+    
+    # Accuracy (evitar división por 0)
+    total = TP + TN + FP + FN
+    metrics["accuracy"] = (TP + TN) / total if total > 0 else 0.0
+
+    # Recall (evitar división por 0)
+    metrics["recall"] = TP / (TP + FN) if (TP + FN) > 0 else 0.0
+
+    # Precision (evitar división por 0)
+    metrics["precision"] = TP / (TP + FP) if (TP + FP) > 0 else 0.0
+
+    # F1-score (evitar división por 0)
+    if (metrics["precision"] + metrics["recall"]) > 0:
+        metrics["f1_score"] = (2 * metrics["precision"] * metrics["recall"]) / (metrics["precision"] + metrics["recall"])
+    else:
+        metrics["f1_score"] = 0.0
 
     return metrics
+
